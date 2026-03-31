@@ -26,10 +26,22 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff check
-        run: ruff check .
+        run: |
+          PY_FILES=$(find . -name "*.py" -not -path "./.git/*" 2>/dev/null | head -1)
+          if [ -z "$PY_FILES" ]; then
+            echo "No Python files found — skipping ruff (scaffold phase)"
+          else
+            ruff check .
+          fi
 
       - name: Run ruff format check
-        run: ruff format --check .
+        run: |
+          PY_FILES=$(find . -name "*.py" -not -path "./.git/*" 2>/dev/null | head -1)
+          if [ -z "$PY_FILES" ]; then
+            echo "No Python files found — skipping ruff format check (scaffold phase)"
+          else
+            ruff format --check .
+          fi
 
   typecheck:
     name: Type Check (mypy)
@@ -47,8 +59,14 @@ jobs:
           pip install mypy
           pip install -r requirements-dev.txt 2>/dev/null || true
 
-      - name: Run mypy
-        run: mypy apps/ services/ core/ --ignore-missing-imports
+      - name: Run mypy (skip if no Python source files yet)
+        run: |
+          PY_FILES=$(find apps/ services/ core/ -name "*.py" 2>/dev/null | head -1)
+          if [ -z "$PY_FILES" ]; then
+            echo "No Python source files found — skipping mypy (scaffold phase)"
+          else
+            mypy apps/ services/ core/ --ignore-missing-imports
+          fi
 
   test:
     name: Unit Tests (pytest)
@@ -68,7 +86,10 @@ jobs:
           pip install -r requirements-dev.txt 2>/dev/null || true
 
       - name: Run unit tests
-        run: pytest tests/unit/ -v --tb=short --cov=apps --cov=services --cov=core --cov-report=xml
+        run: |
+          # Exit code 5 = no tests collected (scaffold phase); treat as success
+          pytest tests/unit/ -v --tb=short --cov=apps --cov=services --cov=core --cov-report=xml \
+            || { code=$?; [ $code -eq 5 ] && echo "No tests collected yet — OK" && exit 0 || exit $code; }
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4

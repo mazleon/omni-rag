@@ -17,7 +17,8 @@ OmniRAG is a production-grade enterprise multimodal RAG platform. It ingests PDF
 | Cache / MQ | Redis 7 |
 | Embeddings | Cohere embed-v4 (1024-dim, batched) |
 | Reranker | Cohere rerank-v3.5 |
-| LLM | Claude 3.5 Sonnet / GPT-4o via LiteLLM proxy |
+| LLM | Claude 3.5 / GPT-4o / any model via OpenRouter (`openrouter.ai`) |
+| Object Storage | Supabase Storage (S3-compatible endpoint) — not AWS S3 |
 | Document Parsing | Docling (IBM) + Tesseract OCR fallback |
 | Frontend | Next.js 15 (RSC + SSE streaming) + shadcn/ui + Tailwind v4 |
 | Observability | OpenTelemetry + Langfuse + ClickHouse |
@@ -111,7 +112,7 @@ User query
   → Hybrid retrieval: dense (Qdrant HNSW) + sparse (Postgres BM25) + structured filter
   → RRF fusion (k=60) → top-50 candidates
   → Cohere rerank-v3.5 → top-8
-  → LiteLLM generation (Claude/GPT-4o) with citation injection
+  → OpenRouter generation (Claude/GPT-4o/any model) with citation injection
   → Faithfulness check (RAGAS inline)
   → SSE streaming response
 ```
@@ -120,7 +121,9 @@ User query
 
 - **Qdrant over pgvector**: Qdrant is used for vectors; Postgres is OLTP only. pgvector at scale competes with OLTP I/O and lacks per-tenant index isolation.
 - **Arq over Celery**: Arq is async-native with Redis Streams (consumer groups, DLQ). Celery's prefork model wastes RAM on I/O-bound workloads.
-- **No LangChain/LlamaIndex**: Custom thin orchestrator (<300 lines) built directly on Anthropic/OpenAI SDKs via LiteLLM. Full observability, no hidden state.
+- **No LangChain/LlamaIndex**: Custom thin orchestrator (<300 lines) calling OpenRouter's OpenAI-compatible API directly. Full observability, no hidden state.
+- **OpenRouter over LiteLLM**: OpenRouter provides model routing, fallbacks, and cost tracking at the API level — no extra proxy process needed. Swap models by changing `OPENROUTER_DEFAULT_MODEL`.
+- **Supabase Storage over AWS S3**: Supabase Storage exposes an S3-compatible endpoint. Use `supabase-py` for simple ops or aiobotocore with `SUPABASE_S3_ENDPOINT` for full S3 compatibility. No AWS account required.
 - **Three-channel hybrid retrieval**: Dense + BM25 + structured filter fused via RRF — not single-channel dense alone.
 - **Multi-tenancy**: Postgres row-level security (RLS) per org + one Qdrant collection per org (`chunks_{org_slug}`).
 - **Chunking strategy**: Layout segmentation → semantic coherence → 15% overlap injection. Fixed-size chunking is explicitly rejected.
@@ -143,14 +146,18 @@ All config is loaded via Pydantic Settings (`core/config.py`). Copy `.env.exampl
 POSTGRES_URL=postgresql+asyncpg://...
 QDRANT_URL=http://localhost:6333
 REDIS_URL=redis://localhost:6379
-COHERE_API_KEY=...
-ANTHROPIC_API_KEY=...
-OPENAI_API_KEY=...       # optional, for LiteLLM fallback
+COHERE_API_KEY=...                     # embeddings + reranker
+OPENROUTER_API_KEY=...                 # LLM calls (replaces LiteLLM/Anthropic/OpenAI keys)
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_DEFAULT_MODEL=anthropic/claude-3.5-sonnet
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...          # for supabase-py client
+SUPABASE_STORAGE_BUCKET=omnirag-documents
+SUPABASE_S3_ENDPOINT=https://<ref>.supabase.co/storage/v1/s3
+SUPABASE_S3_ACCESS_KEY=...             # for aiobotocore S3-compat access
+SUPABASE_S3_SECRET_KEY=...
 LANGFUSE_PUBLIC_KEY=...
 LANGFUSE_SECRET_KEY=...
-S3_BUCKET=...
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
 ```
 
 ## Evaluation Targets (RAGAS)

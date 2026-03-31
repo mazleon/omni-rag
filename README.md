@@ -23,7 +23,8 @@ OmniRAG is a production-grade RAG system that ingests millions of heterogeneous 
 | OLTP | PostgreSQL 17 |
 | Embeddings | Cohere embed-v4 |
 | Reranker | Cohere rerank-v3.5 |
-| LLM | Claude 3.5 / GPT-4o via LiteLLM |
+| LLM | Claude 3.5 / GPT-4o via OpenRouter |
+| Object Storage | Supabase Storage (S3-compatible) |
 | Frontend | Next.js 15 + shadcn/ui |
 | Observability | OpenTelemetry + Langfuse + ClickHouse |
 
