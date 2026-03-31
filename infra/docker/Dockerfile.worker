@@ -1,0 +1,33 @@
+# single-stage build for background jobs
+FROM python:3.12-slim-bookworm
+
+# Build layer
+RUN pip install uv==0.5.5
+WORKDIR /app
+COPY pyproject.toml .
+RUN uv pip compile pyproject.toml -o requirements.txt
+
+# System dependencies for docling / tesseract
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# App layer
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Source code
+COPY core/ ./core/
+COPY services/ ./services/
+COPY apps/worker/ ./apps/worker/
+
+ENV PYTHONPATH=/app
+
+# Non-root unprivileged runner
+RUN useradd -m omnirag && chown -R omnirag /app
+USER omnirag
+
+# Workers run Arq directly, no HTTP health check port exposed
+CMD ["arq", "apps.worker.main.WorkerSettings"]

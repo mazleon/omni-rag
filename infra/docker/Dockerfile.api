@@ -1,0 +1,44 @@
+# multi-stage build — python slim runtime equipped with parsing binaries (Tesseract)
+
+FROM python:3.12-slim-bookworm AS builder
+
+# Generate single requirements file via uv (build dependency)
+RUN pip install uv==0.5.5
+WORKDIR /app
+COPY pyproject.toml .
+RUN uv pip compile pyproject.toml -o requirements.txt
+
+# Final runtime image
+FROM python:3.12-slim-bookworm
+
+# System dependencies for docling / tesseract
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libgl1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install python dependencies globally inside container
+COPY --from=builder /app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Source code
+COPY core/ ./core/
+COPY services/ ./services/
+COPY apps/api/ ./apps/api/
+
+ENV PYTHONPATH=/app
+ENV PORT=8000
+
+# Non-root unprivileged runner
+RUN useradd -m omnirag && chown -R omnirag /app
+USER omnirag
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/v1/health || exit 1
+
+CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
