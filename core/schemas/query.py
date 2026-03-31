@@ -112,3 +112,30 @@ class SSETokenEvent(BaseModel):
 
 class SSEDoneEvent(BaseModel):
     payload: QueryDonePayload
+
+
+# ── Router response models (used by apps/api/routers/query.py) ────────────────
+
+class RetrievalDebug(BaseModel):
+    """Optional retrieval diagnostics returned in non-production environments."""
+    dense_candidates: int
+    sparse_candidates: int
+    reranked_to: int
+    retrieval_latency_ms: int
+    rrf_k: int
+
+
+class QueryResponse(BaseResponse):
+    """Single-shot query response (non-streaming)."""
+    query_id: uuid.UUID
+    answer: str
+    citations: list[Citation]
+    model: str
+    latency_ms: int
+    retrieval_debug: RetrievalDebug | None = None
+
+
+class QueryStreamChunk(BaseModel):
+    """Individual SSE payload — one per streamed token or a final 'done' event."""
+    event: str   # "chunk" | "done" | "error"
+    data: str

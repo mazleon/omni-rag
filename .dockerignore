@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+.github
+
+# Claude / IDE
+.claude
+.agents
+.cursor
+.vscode
+
+# Python caches
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/*.egg-info
+.venv
+venv
+dist
+build
+
+# Environment — never bake into image
+.env
+.env.*
+!.env.example
+
+# Test / coverage artefacts
+coverage.xml
+.coverage
+htmlcov
+
+# Frontend (not needed in Python images)
+apps/frontend
+node_modules
+
+# Data volumes (never in image)
+postgres_data
+qdrant_storage
+redis_data
+clickhouse_data
+
+# Docs and misc
+*.md
+*.docx
+OmniRAG_Architecture_Document.docx

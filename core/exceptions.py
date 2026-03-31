@@ -43,7 +43,8 @@ class AgentMaxIterationsError(OmniRAGError):
 
 # ── HTTP error factories ───────────────────────────────────────────────────────
 
-def not_found(detail: str) -> HTTPException:
+def not_found(resource: str, resource_id: str | None = None) -> HTTPException:
+    detail = f"{resource} {resource_id} not found" if resource_id else f"{resource} not found"
     return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
 
 

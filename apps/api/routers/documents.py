@@ -247,5 +247,5 @@ async def _get_doc_or_404(
     )
     doc = result.scalar_one_or_none()
     if doc is None:
-        raise not_found(f"Document {document_id} not found")
+        raise not_found("Document", str(document_id))
     return doc
