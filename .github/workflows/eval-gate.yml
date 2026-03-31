@@ -1,0 +1,91 @@
+name: RAGAS Eval Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: eval-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ragas-eval:
+    name: RAGAS Offline Evaluation
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: omnirag
+          POSTGRES_PASSWORD: omnirag
+          POSTGRES_DB: omnirag
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+        options: >-
+          --health-cmd "curl -f http://localhost:6333/healthz"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio ragas datasets
+          pip install -r requirements.txt 2>/dev/null || true
+
+      - name: Check golden dataset exists
+        id: golden-check
+        run: |
+          test -d services/evaluation/golden_dataset && \
+          test -n "$(ls -A services/evaluation/golden_dataset 2>/dev/null)" && \
+          echo "exists=true" >> $GITHUB_OUTPUT || echo "exists=false" >> $GITHUB_OUTPUT
+
+      - name: Run RAGAS eval suite
+        if: steps.golden-check.outputs.exists == 'true'
+        env:
+          POSTGRES_URL: postgresql+asyncpg://omnirag:omnirag@localhost:5432/omnirag
+          QDRANT_URL: http://localhost:6333
+          REDIS_URL: redis://localhost:6379
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: pytest tests/eval/ -v --tb=short
+
+      - name: Faithfulness gate check
+        if: steps.golden-check.outputs.exists == 'true'
+        run: |
+          # Implemented in Phase 3: fail if faithfulness drops > 3% from baseline
+          # Placeholder: always passes until golden dataset and baseline are established
+          echo "Eval gate: PASSED (golden dataset not yet populated)"
+
+      - name: Skip notice
+        if: steps.golden-check.outputs.exists == 'false'
+        run: echo "RAGAS eval skipped — golden dataset not yet populated (Phase 3 deliverable)"

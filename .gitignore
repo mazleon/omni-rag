@@ -1,0 +1,97 @@
+# --- General ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# --- Python / Backend / Workers ---
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+.python-version
+
+# Testing / Coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+test-results/
+
+# LLM / AI / RAG Specific
+.ragas/
+models/
+weights/
+checkpoint-*
+outputs/
+data/
+!data/.gitkeep
+
+# Local tracing / logging / Observability
+logs/
+*.log
+.langfuse/
+.otel/
+
+# --- Node.js / Frontend ---
+# Dependencies
+node_modules/
+# Next.js build
+.next/
+out/
+# Vercel / Turbo
+.vercel/
+.turbo/
+# npm / yarn cache
+.npm/
+.yarn/
+# Build artifacts
+build-static/
+
+# --- Database / Storage (Docker & Local) ---
+# Assuming common Docker-compose volume mapping
+postgres_data/
+qdrant_storage/
+redis_data/
+clickhouse_data/
+
+# SQLite / DB dumps
+*.db
+*.sqlite
+dump.rdb
+
+# Postgres / Supabase local data
+.supabase/
+
+# Alembic / SQL Migrations
+# Note: Migrations are committed, but local-only scratch files should be ignored
+migrations/versions/*_scratch.py
+
+# --- Environment Secrets ---
+.env
+.env.*
+!.env.example
+secrets.yaml
+*.pem
+*.key
+
+# --- Infrastructure / Deployment ---
+.terraform/
+.docker/
+# fly.toml is typically committed, but local-only fly overrides should be ignored
+fly.local.toml
+docker-compose.override.yml
