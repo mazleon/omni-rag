@@ -113,6 +113,22 @@ services:
         soft: 262144
         hard: 262144
 
+  # ── Frontend (Next.js) ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: ../infra/docker/Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000/v1
+    depends_on:
+      - api
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next
+
   # ── Jaeger (OTEL traces local) ─────────────────────────────────────────────
   jaeger:
     image: jaegertracing/all-in-one:latest

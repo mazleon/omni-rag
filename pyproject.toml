@@ -1,13 +1,75 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "omnirag"
 version = "0.1.0"
 description = "Enterprise Multimodal RAG Platform"
 requires-python = ">=3.12"
+dependencies = [
+    # ── Core Framework ──────────────────────────────────────────────────────
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "python-multipart>=0.0.12",
 
+    # ── Database ────────────────────────────────────────────────────────────
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+
+    # ── Vector Store ────────────────────────────────────────────────────────
+    "qdrant-client[fastembed]>=1.12.0",
+
+    # ── Cache / Task Queue ──────────────────────────────────────────────────
+    "redis>=5.2.0",
+    "arq>=0.26.1",
+
+    # ── AI / ML APIs ────────────────────────────────────────────────────────
+    "cohere>=5.13.0",
+    "openai>=1.57.0",
+
+    # ── Object Storage ──────────────────────────────────────────────────────
+    "supabase>=2.10.0",
+    "httpx>=0.28.0",
+
+    # ── Document Parsing ────────────────────────────────────────────────────
+    "docling>=2.14.0",
+    "pypdf>=5.1.0",
+
+    # ── Resilience ──────────────────────────────────────────────────────────
+    "tenacity>=9.0.0",
+
+    # ── Observability ────────────────────────────────────────────────────────
+    "structlog>=24.4.0",
+    "opentelemetry-api>=1.29.0",
+    "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+    "opentelemetry-instrumentation-sqlalchemy>=0.50b0",
+    "opentelemetry-exporter-otlp>=1.29.0",
+    "langfuse>=2.57.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "mypy>=1.13.0",
+    "ruff>=0.8.0",
+    "testcontainers[postgres,redis]>=4.8.0",
+    "factory-boy>=3.3.0",
+    "ragas>=0.2.6",
+    "datasets>=3.2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["apps*", "services*", "core*"]
+
+# ── Ruff ────────────────────────────────────────────────────────────────────────
 [tool.ruff]
 line-length = 100
 target-version = "py312"
@@ -19,12 +81,14 @@ ignore = ["E501"]
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "services", "core"]
 
+# ── Mypy ────────────────────────────────────────────────────────────────────────
 [tool.mypy]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
 exclude = ["tests/", "infra/", "apps/frontend/"]
 
+# ── Pytest ──────────────────────────────────────────────────────────────────────
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
@@ -32,4 +96,4 @@ addopts = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["apps", "services", "core"]
-omit = ["*/tests/*", "*/migrations/*"]
+omit = ["*/tests/*", "*/migrations/*", "*/__init__.py"]

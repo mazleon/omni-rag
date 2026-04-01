@@ -40,8 +40,9 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "ok", "timestamp": time.time()}
 
-    from apps.api.routers import documents, query
+    from apps.api.routers import documents, query, auth
 
+    app.include_router(auth.router, prefix=settings.API_V1_STR, tags=["auth"])
     app.include_router(documents.router, prefix=settings.API_V1_STR, tags=["documents"])
     app.include_router(query.router, prefix=settings.API_V1_STR, tags=["query"])
 
