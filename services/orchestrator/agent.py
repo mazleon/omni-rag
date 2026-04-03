@@ -157,7 +157,7 @@ Guidelines:
 
 class AgentService:
     def __init__(self) -> None:
-        self._agent = AgentConfig()
+        self._agent = QueryAgent()
 
     async def run(
         self,

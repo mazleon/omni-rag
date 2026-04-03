@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from core.config import settings
-from core.db import get_db_session
+from core.db import get_db
 from core.models import User, Org
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -79,7 +79,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials) -> dict[str, Any]:
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ) -> User:
     payload = verify_token(credentials)
     user_id = uuid.UUID(payload["sub"])
@@ -107,7 +107,7 @@ async def get_current_active_user(
 @router.post("/register", response_model=TokenResponse)
 async def register(
     user_data: UserCreate,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     result = await session.execute(
         select(User).where(User.email == user_data.email)
@@ -172,7 +172,7 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: UserLogin,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
 ):
     result = await session.execute(
         select(User).where(User.email == credentials.email)

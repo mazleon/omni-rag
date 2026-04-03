@@ -4,10 +4,12 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db import get_db_session
+from core.db import get_db
 from core.models import Document, Org, User, DocumentStatus
+from apps.api.routers.auth import get_current_active_user
 from services.storage import get_storage_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -26,43 +28,14 @@ class DocumentStatusResponse(BaseModel):
     error: str | None = None
 
 
-async def get_current_user(
-    session: AsyncSession = Depends(get_db_session),
-) -> User:
-    from sqlalchemy import select
-    result = await session.execute(
-        select(User).where(User.email == "admin@omnirag.local")
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        user = User(
-            id=uuid.uuid4(),
-            org_id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
-            email="admin@omnirag.local",
-            full_name="Admin",
-            role="admin",
-        )
-        session.add(user)
-        await session.commit()
-    return user
-
-
 async def get_current_org(
-    session: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_active_user),
+    session: AsyncSession = Depends(get_db),
 ) -> Org:
-    from sqlalchemy import select
-    result = await session.execute(
-        select(Org).where(Org.slug == "default")
-    )
+    result = await session.execute(select(Org).where(Org.id == current_user.org_id))
     org = result.scalar_one_or_none()
     if not org:
-        org = Org(
-            id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
-            name="Default Organization",
-            slug="default",
-        )
-        session.add(org)
-        await session.commit()
+        raise HTTPException(status_code=404, detail="Organization not found")
     return org
 
 
@@ -70,8 +43,8 @@ async def get_current_org(
 async def upload_document(
     file: UploadFile = File(...),
     collection_id: uuid.UUID | None = None,
-    session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_active_user),
     org: Org = Depends(get_current_org),
 ):
     if not file.filename:
@@ -80,7 +53,6 @@ async def upload_document(
     file_content = await file.read()
     content_hash = hashlib.sha256(file_content).hexdigest()
 
-    from sqlalchemy import select
     existing = await session.execute(
         select(Document).where(Document.content_hash == content_hash)
     )
@@ -118,11 +90,14 @@ async def upload_document(
 @router.get("/{document_id}/status", response_model=DocumentStatusResponse)
 async def get_document_status(
     document_id: uuid.UUID,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_active_user),
 ):
-    from sqlalchemy import select
     result = await session.execute(
-        select(Document).where(Document.id == document_id)
+        select(Document).where(
+            Document.id == document_id,
+            Document.org_id == user.org_id,
+        )
     )
     document = result.scalar_one_or_none()
     if not document:
@@ -141,10 +116,10 @@ async def list_documents(
     collection_id: uuid.UUID | None = None,
     limit: int = 50,
     offset: int = 0,
-    session: AsyncSession = Depends(get_db_session),
+    session: AsyncSession = Depends(get_db),
     org: Org = Depends(get_current_org),
 ):
-    from sqlalchemy import select, func
+    from sqlalchemy import func
 
     query = select(Document).where(Document.org_id == org.id)
     if collection_id:

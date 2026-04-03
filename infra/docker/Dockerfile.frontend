@@ -1,14 +1,12 @@
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/apps/frontend
 
-COPY package.json ./
-RUN npm install
+COPY apps/frontend/package.json ./
+RUN npm install --legacy-peer-deps
 
-COPY . .
-
-RUN npm run build
+COPY apps/frontend/ ./
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

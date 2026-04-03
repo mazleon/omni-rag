@@ -115,8 +115,8 @@ class ApiClient {
 
   async queryStream(
     query: string,
-    collectionId?: string,
-    onChunk: (data: any) => void
+    onChunk: (data: any) => void,
+    collectionId?: string
   ): Promise<void> {
     const response = await fetch(`${this.baseUrl}/query/stream`, {
       method: 'POST',

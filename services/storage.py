@@ -110,3 +110,20 @@ async def health_check() -> bool:
         return True
     except Exception:
         return False
+
+
+class StorageService:
+    """Wrapper around module-level storage functions for dependency injection."""
+
+    async def get_presigned_upload_url(self, file_path: str, content_type: str | None = None) -> str:
+        return await get_presigned_upload_url(file_path)
+
+    async def download_file(self, path: str) -> bytes:
+        return await download_bytes(path)
+
+    async def delete_object(self, path: str) -> None:
+        await delete_object(path)
+
+
+def get_storage_service() -> StorageService:
+    return StorageService()

@@ -27,7 +27,7 @@ async def process_ingest_job(ctx: dict[str, Any], input_data: IngestJobInput) ->
     from services.ingestion import get_chunker_service, get_embedder_service, get_parser_service
     from services.storage import get_storage_service
     from core.config import settings
-    from core.db import get_session
+    from core.db import get_db as get_session
     from core.models import Chunk, Document, DocumentStatus
 
     session: AsyncSession = ctx.get("session")
