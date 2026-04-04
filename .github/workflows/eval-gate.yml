@@ -14,20 +14,6 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: omnirag
-          POSTGRES_PASSWORD: omnirag
-          POSTGRES_DB: omnirag
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
       qdrant:
         image: qdrant/qdrant:latest
         ports:
@@ -51,16 +37,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - name: Install dependencies
-        run: |
-          pip install pytest pytest-asyncio ragas datasets
-          pip install -r requirements.txt 2>/dev/null || true
+        run: uv sync --extra dev
 
       - name: Check golden dataset exists
         id: golden-check
@@ -72,12 +55,12 @@ jobs:
       - name: Run RAGAS eval suite
         if: steps.golden-check.outputs.exists == 'true'
         env:
-          POSTGRES_URL: postgresql+asyncpg://omnirag:omnirag@localhost:5432/omnirag
+          POSTGRES_URL: ${{ secrets.SUPABASE_POSTGRES_URL }}
           QDRANT_URL: http://localhost:6333
           REDIS_URL: redis://localhost:6379
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: pytest tests/eval/ -v --tb=short
+        run: uv run pytest tests/eval/ -v --tb=short
 
       - name: Faithfulness gate check
         if: steps.golden-check.outputs.exists == 'true'
