@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, KeyboardEvent } from 'react';
+import { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,12 +17,20 @@ export function ChatInput({
   onChange: externalOnChange,
   onSend,
   disabled = false,
-  placeholder = 'Ask a question about your documents...',
+  placeholder = 'Ask anything...',
 }: ChatInputProps) {
   const [internalValue, setInternalValue] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const value = externalValue ?? internalValue;
   const onChange = externalOnChange ?? ((e) => setInternalValue(e.target.value));
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+    }
+  }, [value]);
 
   const handleSend = () => {
     const trimmed = value.trim();
@@ -41,9 +49,13 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t border-slate-800 p-4">
-      <div className="flex items-end gap-2 rounded-xl border border-slate-700 bg-slate-800/50 px-3 py-2 focus-within:border-blue-500 focus-within:outline-none">
+    <div className="relative">
+      <div className={cn(
+        'flex items-end gap-2 rounded-lg border bg-zinc-900 px-3 py-2 transition-colors',
+        'border-zinc-800 focus-within:border-zinc-700',
+      )}>
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={onChange}
           onKeyDown={handleKeyDown}
@@ -51,28 +63,18 @@ export function ChatInput({
           disabled={disabled}
           rows={1}
           className={cn(
-            'flex-1 resize-none bg-transparent py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none',
-            'max-h-32 min-h-[24px]',
+            'flex-1 resize-none bg-transparent py-1 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none',
+            'max-h-40 min-h-[24px] leading-relaxed',
             disabled && 'opacity-50',
           )}
-          style={{
-            height: 'auto',
-            minHeight: '24px',
-            maxHeight: '128px',
-          }}
-          onInput={(e) => {
-            const target = e.target as HTMLTextAreaElement;
-            target.style.height = 'auto';
-            target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
-          }}
         />
         <button
           onClick={handleSend}
           disabled={disabled || !value.trim()}
           className={cn(
-            'shrink-0 rounded-lg p-2 transition-colors',
+            'shrink-0 rounded-md p-2 transition-colors',
             disabled || !value.trim()
-              ? 'text-slate-600'
+              ? 'text-zinc-600 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-500',
           )}
           aria-label="Send message"
@@ -84,9 +86,6 @@ export function ChatInput({
           )}
         </button>
       </div>
-      <p className="mt-2 text-center text-xs text-slate-600">
-        OmniRAG may produce inaccurate information. Verify important details.
-      </p>
     </div>
   );
 }

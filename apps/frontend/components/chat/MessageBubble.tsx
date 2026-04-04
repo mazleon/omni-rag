@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
-import { cn, formatDateTime } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { SourceCard } from './SourceCard';
 import type { ChatMessage } from '@/hooks/useChat';
 
@@ -30,7 +30,6 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement('textarea');
       textarea.value = message.content;
       document.body.appendChild(textarea);
@@ -43,21 +42,26 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
   };
 
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
-      <div className={cn('max-w-[78%] space-y-2', isUser ? 'items-end' : 'items-start')}>
+    <div className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
+      {!isUser && (
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800 text-[10px] font-medium text-zinc-400 mt-0.5">
+          AI
+        </div>
+      )}
+
+      <div className={cn('max-w-[80%]', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
-            'group relative rounded-2xl px-4 py-3 text-sm leading-relaxed',
+            'group relative rounded-lg px-3.5 py-2.5 text-sm leading-relaxed',
             isUser
-              ? 'rounded-tr-sm bg-blue-600 text-white'
-              : 'rounded-tl-sm bg-slate-800 text-slate-100',
+              ? 'bg-blue-600 text-white'
+              : 'bg-zinc-800/50 text-zinc-200',
           )}
         >
-          {/* Copy button (assistant only) */}
           {!isUser && (
             <button
               onClick={handleCopy}
-              className="absolute right-2 top-2 rounded p-1 text-slate-500 opacity-0 transition-opacity hover:text-slate-300 group-hover:opacity-100"
+              className="absolute right-1.5 top-1.5 rounded p-1 text-zinc-500 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100"
               aria-label="Copy message"
             >
               {copied ? (
@@ -71,32 +75,30 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
           {message.isStreaming ? (
             <span>
               {message.content}
-              <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-slate-400" />
+              <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-zinc-400" />
             </span>
           ) : (
             <span className="whitespace-pre-wrap">{message.content}</span>
           )}
         </div>
 
-        {/* Sources + feedback (assistant only) */}
         {!isUser && !message.isStreaming && (
-          <div className="space-y-1.5 px-1">
+          <div className="space-y-1.5 mt-1.5">
             {message.sources && message.sources.length > 0 && (
               <div>
                 <button
                   onClick={() => setShowSources((v) => !v)}
-                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300"
+                  className="flex items-center gap-1 rounded px-1.5 py-1 text-xs text-zinc-500 hover:text-zinc-300"
                 >
                   {showSources ? (
                     <ChevronUp className="h-3 w-3" />
                   ) : (
                     <ChevronDown className="h-3 w-3" />
                   )}
-                  {message.sources.length} source
-                  {message.sources.length !== 1 ? 's' : ''}
+                  {message.sources.length} source{message.sources.length !== 1 ? 's' : ''}
                 </button>
                 {showSources && (
-                  <div className="mt-2 space-y-2">
+                  <div className="mt-1.5 space-y-1.5">
                     {message.sources.map((src, i) => (
                       <SourceCard key={src.chunk_id} source={src} index={i} />
                     ))}
@@ -105,41 +107,46 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
               </div>
             )}
 
-            {/* Feedback */}
             {message.queryId && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-600">Helpful?</span>
+              <div className="flex items-center gap-1 px-1">
+                <span className="text-[10px] text-zinc-600">Helpful?</span>
                 <button
                   onClick={() => handleFeedback(1)}
                   disabled={feedbackGiven !== null}
                   className={cn(
-                    'rounded p-1 text-slate-500 transition-colors hover:text-emerald-400',
-                    feedbackGiven === 1 && 'text-emerald-400',
+                    'rounded p-1 transition-colors',
+                    feedbackGiven === 1
+                      ? 'text-emerald-400'
+                      : 'text-zinc-600 hover:text-emerald-400',
                   )}
                   aria-label="Thumbs up"
                 >
-                  <ThumbsUp className="h-3.5 w-3.5" />
+                  <ThumbsUp className="h-3 w-3" />
                 </button>
                 <button
                   onClick={() => handleFeedback(-1)}
                   disabled={feedbackGiven !== null}
                   className={cn(
-                    'rounded p-1 text-slate-500 transition-colors hover:text-red-400',
-                    feedbackGiven === -1 && 'text-red-400',
+                    'rounded p-1 transition-colors',
+                    feedbackGiven === -1
+                      ? 'text-red-400'
+                      : 'text-zinc-600 hover:text-red-400',
                   )}
                   aria-label="Thumbs down"
                 >
-                  <ThumbsDown className="h-3.5 w-3.5" />
+                  <ThumbsDown className="h-3 w-3" />
                 </button>
               </div>
             )}
           </div>
         )}
-
-        <p className={cn('px-1 text-xs text-slate-600', isUser && 'text-right')}>
-          {formatDateTime(message.timestamp.toISOString())}
-        </p>
       </div>
+
+      {isUser && (
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-700 text-[10px] font-medium text-zinc-300 mt-0.5">
+          {message.content?.[0]?.toUpperCase() ?? 'U'}
+        </div>
+      )}
     </div>
   );
 }

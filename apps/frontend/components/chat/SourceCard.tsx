@@ -25,42 +25,42 @@ export function SourceCard({ source, index }: SourceCardProps) {
     : null;
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-3">
+    <div className="rounded-md border border-zinc-800 bg-zinc-900/50">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-start justify-between gap-2 text-left"
+        className="flex w-full items-start justify-between gap-2 px-2.5 py-2 text-left"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600/20 text-xs font-semibold text-blue-400">
+          <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded bg-zinc-800 text-[10px] font-medium text-zinc-400">
             {index + 1}
           </span>
-          <FileText className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          <span className="truncate text-xs font-medium text-slate-300">
+          <FileText className="h-3.5 w-3.5 shrink-0 text-zinc-500" />
+          <span className="truncate text-xs font-medium text-zinc-300">
             {docLabel}
             {pages ? ` · p.${pages.join(', ')}` : ''}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {score > 0 && (
-            <span className="text-xs text-slate-500">
+            <span className="text-[10px] text-zinc-500">
               {(score * 100).toFixed(0)}%
             </span>
           )}
           {expanded ? (
-            <ChevronUp className="h-3.5 w-3.5 text-slate-500" />
+            <ChevronUp className="h-3 w-3 text-zinc-500" />
           ) : (
-            <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+            <ChevronDown className="h-3 w-3 text-zinc-500" />
           )}
         </div>
       </button>
       {expanded && source.content && (
-        <p className="mt-2 border-t border-slate-700 pt-2 text-xs leading-relaxed text-slate-400">
+        <p className="border-t border-zinc-800 px-2.5 py-2 text-xs leading-relaxed text-zinc-400">
           {source.content}
         </p>
       )}
       {!expanded && source.content && (
-        <p className="mt-1 text-xs text-slate-500">
-          {truncate(source.content, 120)}
+        <p className="px-2.5 pb-2 text-[10px] text-zinc-600">
+          {truncate(source.content, 100)}
         </p>
       )}
     </div>
