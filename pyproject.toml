@@ -97,6 +97,9 @@ exclude = ["tests/", "infra/", "apps/frontend/"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 addopts = "-v --tb=short"
+markers = [
+    "integration: marks tests as integration tests (require Docker)",
+]
 
 [tool.coverage.run]
 source = ["apps", "services", "core"]

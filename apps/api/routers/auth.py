@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 import jwt
-from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -45,13 +45,21 @@ class UserResponse(BaseModel):
     org_id: str
 
 
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def _verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
+
 def create_access_token(user_id: uuid.UUID, org_id: uuid.UUID) -> tuple[str, datetime]:
-    expires = datetime.utcnow() + timedelta(hours=24)
+    expires = datetime.now(timezone.utc) + timedelta(hours=24)
     payload = {
         "sub": str(user_id),
         "org_id": str(org_id),
         "exp": expires,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc),
     }
     token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
     return token, expires
@@ -148,7 +156,7 @@ async def register(
         org_id=org.id,
         email=user_data.email,
         full_name=user_data.full_name,
-        password_hash=bcrypt.hash(user_data.password),
+        password_hash=_hash_password(user_data.password),
         role="admin" if not existing_user else "member",
     )
     session.add(user)
@@ -158,7 +166,7 @@ async def register(
 
     return TokenResponse(
         access_token=access_token,
-        expires_in=int((expires - datetime.utcnow()).total_seconds()),
+        expires_in=int((expires - datetime.now(timezone.utc)).total_seconds()),
         user={
             "id": str(user.id),
             "email": user.email,
@@ -179,7 +187,7 @@ async def login(
     )
     user = result.scalar_one_or_none()
 
-    if not user or not bcrypt.verify(credentials.password, user.password_hash):
+    if not user or not _verify_password(credentials.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -189,7 +197,7 @@ async def login(
 
     return TokenResponse(
         access_token=access_token,
-        expires_in=int((expires - datetime.utcnow()).total_seconds()),
+        expires_in=int((expires - datetime.now(timezone.utc)).total_seconds()),
         user={
             "id": str(user.id),
             "email": user.email,
@@ -221,7 +229,7 @@ async def refresh_token(
 
     return TokenResponse(
         access_token=access_token,
-        expires_in=int((expires - datetime.utcnow()).total_seconds()),
+        expires_in=int((expires - datetime.now(timezone.utc)).total_seconds()),
         user={
             "id": str(current_user.id),
             "email": current_user.email,

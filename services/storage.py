@@ -1,122 +1,131 @@
-"""Supabase Storage service — presigned upload URLs, byte downloads, deletes.
+"""Storage service — Supabase S3-compatible storage.
 
-All raw-bytes I/O in the ingestion pipeline goes through this module.
-Never import boto3 or AWS SDK — Supabase Storage is the exclusive object store.
+Uses boto3 with Supabase S3 credentials for upload/download/delete.
+Falls back to local filesystem if S3 credentials are not configured.
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
-
-import httpx
-from supabase._async.client import AsyncClient as AsyncSupabaseClient
-from supabase import create_async_client
+import io
+import os
+from pathlib import Path
 
 from core.config import settings
 from core.logging import get_logger
 
 log = get_logger(__name__)
 
-# ── Client singleton ───────────────────────────────────────────────────────────
-
-_supabase_client: AsyncSupabaseClient | None = None
-
-
-async def get_supabase_client() -> AsyncSupabaseClient:
-    """Return (or lazily create) the shared Supabase async client."""
-    global _supabase_client
-    if _supabase_client is None:
-        _supabase_client = await create_async_client(
-            settings.supabase_url,
-            settings.supabase_service_role_key,
-        )
-    return _supabase_client
+LOCAL_STORAGE_DIR = Path("storage/local")
+LOCAL_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── Public API ─────────────────────────────────────────────────────────────────
-
-async def get_presigned_upload_url(path: str, expires_in: int = 3600) -> str:
-    """
-    Return a presigned URL the client can use to PUT a file directly into
-    Supabase Storage without server-side proxying.
-
-    Args:
-        path:       Storage path, e.g. ``{org_id}/{doc_type}/{doc_id}.pdf``
-        expires_in: URL validity in seconds (default 1 hour).
-
-    Returns:
-        Signed upload URL string.
-    """
-    client = await get_supabase_client()
-    response = await client.storage.from_(settings.supabase_storage_bucket).create_signed_upload_url(
-        path=path,
+def _use_s3() -> bool:
+    return bool(
+        settings.SUPABASE_S3_ENDPOINT
+        and settings.SUPABASE_S3_ACCESS_KEY
+        and settings.SUPABASE_S3_SECRET_KEY
+        and settings.SUPABASE_S3_ACCESS_KEY.strip()
     )
-    signed_url: str = response["signedURL"]
-    log.info("storage.presigned_url.created", path=path, expires_in=expires_in)
-    return signed_url
 
 
-async def download_bytes(path: str) -> bytes:
-    """
-    Download a file from Supabase Storage and return its raw bytes.
+def _get_s3_client():
+    import boto3
+    from botocore.config import Config
 
-    Uses httpx directly to stream the download rather than buffering through
-    supabase-py, which avoids memory spikes on large documents.
-
-    Args:
-        path: Storage path of the file to download.
-
-    Returns:
-        Raw file bytes.
-
-    Raises:
-        httpx.HTTPStatusError: If the download request fails (4xx / 5xx).
-    """
-    client = await get_supabase_client()
-
-    # Get a short-lived signed download URL (avoids exposing service key)
-    response = await client.storage.from_(settings.supabase_storage_bucket).create_signed_url(
-        path=path,
-        expires_in=300,  # 5-minute window — only used immediately
+    return boto3.client(
+        "s3",
+        endpoint_url=settings.SUPABASE_S3_ENDPOINT,
+        aws_access_key_id=settings.SUPABASE_S3_ACCESS_KEY,
+        aws_secret_access_key=settings.SUPABASE_S3_SECRET_KEY,
+        region_name=settings.SUPABASE_S3_REGION or "ap-southeast-1",
+        config=Config(signature_version="s3v4"),
     )
-    signed_url: str = response["signedURL"]
-
-    async with httpx.AsyncClient(timeout=120.0) as http:
-        r = await http.get(signed_url)
-        r.raise_for_status()
-
-    log.info("storage.download.complete", path=path, size_bytes=len(r.content))
-    return r.content
 
 
-async def delete_object(path: str) -> None:
-    """
-    Remove a file from Supabase Storage.
-    Called during soft-delete vector pruning (Phase 3).
+def _local_path(file_path: str) -> Path:
+    return LOCAL_STORAGE_DIR / file_path
 
-    Args:
-        path: Storage path to delete.
-    """
-    client = await get_supabase_client()
-    await client.storage.from_(settings.supabase_storage_bucket).remove([path])
-    log.info("storage.object.deleted", path=path)
+
+async def upload_bytes(file_path: str, content: bytes, content_type: str | None = None) -> str:
+    if _use_s3():
+        try:
+            s3 = _get_s3_client()
+            extra_args = {}
+            if content_type:
+                extra_args["ContentType"] = content_type
+            s3.upload_fileobj(
+                io.BytesIO(content),
+                settings.SUPABASE_STORAGE_BUCKET,
+                file_path,
+                ExtraArgs=extra_args,
+            )
+            log.info("storage.s3.upload", path=file_path, size=len(content))
+            return file_path
+        except Exception as e:
+            log.warning("storage.s3.upload_failed", error=str(e))
+
+    path = _local_path(file_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(content)
+    log.info("storage.local.upload", path=file_path, size=len(content))
+    return file_path
+
+
+async def download_bytes(file_path: str) -> bytes:
+    if _use_s3():
+        try:
+            s3 = _get_s3_client()
+            response = s3.get_object(
+                Bucket=settings.SUPABASE_STORAGE_BUCKET,
+                Key=file_path,
+            )
+            content = response["Body"].read()
+            log.info("storage.s3.download", path=file_path, size=len(content))
+            return content
+        except Exception as e:
+            log.warning("storage.s3.download_failed", error=str(e))
+
+    path = _local_path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    content = path.read_bytes()
+    log.info("storage.local.download", path=file_path, size=len(content))
+    return content
+
+
+async def delete_object(file_path: str) -> None:
+    if _use_s3():
+        try:
+            s3 = _get_s3_client()
+            s3.delete_object(
+                Bucket=settings.SUPABASE_STORAGE_BUCKET,
+                Key=file_path,
+            )
+            log.info("storage.s3.delete", path=file_path)
+            return
+        except Exception as e:
+            log.warning("storage.s3.delete_failed", error=str(e))
+
+    path = _local_path(file_path)
+    if path.exists():
+        path.unlink()
+        log.info("storage.local.delete", path=file_path)
 
 
 async def health_check() -> bool:
-    """Return True if Supabase Storage is reachable."""
     try:
-        client = await get_supabase_client()
-        await client.storage.list_buckets()
-        return True
+        if _use_s3():
+            s3 = _get_s3_client()
+            s3.list_objects_v2(Bucket=settings.SUPABASE_STORAGE_BUCKET, MaxKeys=1)
+            return True
+        return LOCAL_STORAGE_DIR.exists()
     except Exception:
         return False
 
 
 class StorageService:
-    """Wrapper around module-level storage functions for dependency injection."""
-
-    async def get_presigned_upload_url(self, file_path: str, content_type: str | None = None) -> str:
-        return await get_presigned_upload_url(file_path)
+    async def upload_file(self, file_path: str, content: bytes, content_type: str | None = None) -> str:
+        return await upload_bytes(file_path, content, content_type)
 
     async def download_file(self, path: str) -> bytes:
         return await download_bytes(path)

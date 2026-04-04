@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from datetime import datetime, timezone
 
 
 class TestGoldenDatasetService:
@@ -41,7 +42,6 @@ class TestEvaluationInput:
 class TestEvaluationResult:
     def test_evaluation_result_creation(self):
         from services.evaluation.ragas_runner import EvaluationResult
-        from datetime import datetime
         
         result = EvaluationResult(
             query="test query",
@@ -49,7 +49,7 @@ class TestEvaluationResult:
             answer_relevancy=0.85,
             context_precision=0.8,
             context_recall=0.75,
-            evaluated_at=datetime.utcnow(),
+            evaluated_at=datetime.now(timezone.utc),
         )
         
         assert result.query == "test query"
@@ -60,7 +60,6 @@ class TestEvaluationResult:
 class TestGoldenDatasetEntry:
     def test_golden_entry_creation(self):
         from services.evaluation.ragas_runner import GoldenDatasetEntry
-        from datetime import datetime
         
         entry = GoldenDatasetEntry(
             id=uuid.uuid4(),
@@ -68,7 +67,7 @@ class TestGoldenDatasetEntry:
             ground_truth="test answer",
             contexts=["ctx1"],
             source_document_id=None,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         assert entry.query == "test query"

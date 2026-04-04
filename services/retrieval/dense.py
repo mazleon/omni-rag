@@ -6,6 +6,9 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from core.config import settings
+from core.logging import get_logger
+
+log = get_logger(__name__)
 
 
 class SearchResult(BaseModel):
@@ -43,9 +46,9 @@ class QdrantDenseRetriever:
                 if conditions:
                     search_filter = Filter(must=conditions)
 
-            results = await self._client.search(
+            results = await self._client.query_points(
                 collection_name=collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=self.config.top_k,
                 score_threshold=self.config.score_threshold,
                 query_filter=search_filter,
@@ -60,9 +63,10 @@ class QdrantDenseRetriever:
                     score=r.score,
                     page_numbers=self._parse_page_numbers(r.payload.get("page_numbers")),
                 )
-                for r in results
+                for r in results.points
             ]
-        except Exception:
+        except Exception as e:
+            log.error("retrieval.dense_search_error", error=str(e), org_id=str(org_id))
             return []
 
     def _parse_page_numbers(self, page_str: str | None) -> list[int] | None:

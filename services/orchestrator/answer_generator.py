@@ -72,6 +72,11 @@ class AnswerGenerator:
                 tokens_used=tokens_used,
             )
         except Exception as e:
+            if "401" in str(e) or "User not found" in str(e):
+                return GeneratedAnswer(
+                    answer="I'm unable to generate an answer because the AI service is currently unavailable. Please try again later or contact support.",
+                    sources=[],
+                )
             return GeneratedAnswer(
                 answer=f"Error generating answer: {str(e)}",
                 sources=[],

@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import uuid
 
 import cohere
 from pydantic import BaseModel
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from core.config import settings
+from core.logging import get_logger
 from services.retrieval.fusion import RankedChunk
+
+log = get_logger(__name__)
 
 
 class RerankResult(BaseModel):
@@ -25,6 +31,12 @@ class CohereReranker:
         self.config = config or RerankerConfig()
         self._client = cohere.AsyncClient(api_key=settings.COHERE_API_KEY)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        retry=retry_if_exception_type(Exception),
+        reraise=True,
+    )
     async def rerank(
         self,
         query: str,
@@ -57,7 +69,12 @@ class CohereReranker:
                 )
 
             return results
-        except Exception:
+        except Exception as e:
+            log.warning(
+                "reranker.api_error",
+                error=str(e),
+                fallback="returning_top_chunks_without_reranking",
+            )
             return [
                 RerankResult(
                     chunk_id=c.chunk_id,

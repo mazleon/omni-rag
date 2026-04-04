@@ -1,0 +1,72 @@
+[
+  {
+    "question": "What is the main purpose of this document?",
+    "answer": "The document describes the key objectives and scope of the project.",
+    "contexts": [
+      "This document outlines the main objectives of the project, including the scope, deliverables, and timeline for completion."
+    ]
+  },
+  {
+    "question": "What are the financial highlights from the annual report?",
+    "answer": "Revenue grew by 15% year-over-year and EBITDA margin improved to 22%.",
+    "contexts": [
+      "Annual revenue reached $2.4 billion, representing 15% growth year-over-year. EBITDA margin improved from 19% to 22% due to operational efficiencies."
+    ]
+  },
+  {
+    "question": "What methodology was used in the research study?",
+    "answer": "The study used a mixed-methods approach combining qualitative interviews with quantitative survey data from 500 participants.",
+    "contexts": [
+      "The research employed a mixed-methods design. We conducted 30 in-depth qualitative interviews followed by a quantitative survey administered to 500 participants across three regions."
+    ]
+  },
+  {
+    "question": "What are the key risks identified in the risk assessment?",
+    "answer": "The primary risks are supply chain disruptions, regulatory changes, and cybersecurity threats.",
+    "contexts": [
+      "Risk Assessment Summary: Three critical risk categories were identified: (1) Supply chain disruptions rated HIGH likelihood with HIGH impact; (2) Regulatory changes rated MEDIUM likelihood with HIGH impact; (3) Cybersecurity threats rated HIGH likelihood with MEDIUM impact."
+    ]
+  },
+  {
+    "question": "What product versions are currently supported?",
+    "answer": "Versions 3.x and 4.x are currently supported, while version 2.x reached end-of-life in January 2024.",
+    "contexts": [
+      "Supported Versions: Version 4.x (current) - full support until December 2026. Version 3.x - security updates only until June 2025. Version 2.x - end-of-life as of January 2024, no further updates."
+    ]
+  },
+  {
+    "question": "How many employees does the company have globally?",
+    "answer": "The company employs approximately 12,500 people across 28 countries.",
+    "contexts": [
+      "As of December 31, 2023, the company employed 12,487 full-time equivalent employees in 28 countries, with the largest concentrations in the United States (4,200), Germany (1,800), and India (2,100)."
+    ]
+  },
+  {
+    "question": "What is the recommended dosage for the medication?",
+    "answer": "The recommended adult dosage is 10mg once daily, taken with food.",
+    "contexts": [
+      "Dosage and Administration: Adults (18 years and older): 10mg orally once daily, preferably with food to reduce gastrointestinal effects. Do not exceed 20mg per day. Pediatric dosage has not been established."
+    ]
+  },
+  {
+    "question": "What were the outcomes of the clinical trial?",
+    "answer": "The trial showed a 68% response rate in the treatment group versus 31% in the placebo group, with statistical significance (p<0.001).",
+    "contexts": [
+      "Primary Endpoint Results: The treatment group demonstrated a 68% response rate (n=245/360) compared to 31% in the placebo group (n=112/360). The difference was statistically significant (p<0.001, 95% CI: 28.3-46.1 percentage points)."
+    ]
+  },
+  {
+    "question": "What are the system requirements for installation?",
+    "answer": "The software requires a 64-bit OS (Windows 10+ or Ubuntu 20.04+), 8GB RAM minimum, and 50GB free disk space.",
+    "contexts": [
+      "System Requirements: Operating System: Windows 10 (64-bit) or later, Ubuntu 20.04 LTS or later, macOS 12 or later. Memory: 8GB RAM minimum, 16GB recommended. Storage: 50GB free disk space. Processor: Intel Core i5 or AMD Ryzen 5 (4 cores minimum)."
+    ]
+  },
+  {
+    "question": "What is the project completion timeline?",
+    "answer": "The project is scheduled for completion in Q3 2025, with Phase 1 due by March 2025 and Phase 2 by June 2025.",
+    "contexts": [
+      "Project Timeline: Phase 1 (Foundation): January - March 2025. Phase 2 (Development): April - June 2025. Phase 3 (Testing and Deployment): July - September 2025. Target completion: September 30, 2025."
+    ]
+  }
+]

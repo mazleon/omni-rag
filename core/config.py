@@ -1,7 +1,6 @@
-import os
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, PostgresDsn, RedisDsn
+from pydantic import Field
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -18,9 +17,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/v1"
 
     # Database
-    POSTGRES_URL: str = Field(..., env="POSTGRES_URL")
-    DATABASE_URL: Optional[str] = None
-    DIRECT_URL: Optional[str] = None
+    POSTGRES_URL: str = Field(...)
 
     # Vector Store
     QDRANT_URL: str = "http://localhost:6333"
@@ -40,6 +37,12 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
     SUPABASE_STORAGE_BUCKET: str = "omnirag-documents"
 
+    # Supabase S3-compatible endpoint
+    SUPABASE_S3_ENDPOINT: Optional[str] = None
+    SUPABASE_S3_ACCESS_KEY: Optional[str] = None
+    SUPABASE_S3_SECRET_KEY: Optional[str] = None
+    SUPABASE_S3_REGION: Optional[str] = "ap-southeast-1"
+
     # Observability
     OTEL_EXPORTER_OTLP_ENDPOINT: Optional[str] = None
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
@@ -47,6 +50,6 @@ class Settings(BaseSettings):
     LANGFUSE_BASE_URL: str = "https://us.cloud.langfuse.com"
 
     # Auth
-    JWT_SECRET: str = Field(default="dev-secret-change-in-production", env="JWT_SECRET")
+    JWT_SECRET: str = Field(default="dev-secret-change-in-production")
 
 settings = Settings()

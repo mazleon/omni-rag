@@ -7,19 +7,17 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
-    LargeBinary,
     String,
     Text,
     Uuid,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-class Base(DeclarativeBase):
-    pass
+from core.db import Base
 
 
 class OrgStatus(str, enum.Enum):
@@ -149,10 +147,43 @@ class Query(Base):
 
     latency_ms: Mapped[Optional[int]] = mapped_column(Integer)
     tokens_used: Mapped[Optional[int]] = mapped_column(Integer)
-    cost_usd: Mapped[Optional[float]] = mapped_column(Integer)
+    cost_usd: Mapped[Optional[float]] = mapped_column(Float)
+    feedback: Mapped[Optional[int]] = mapped_column(Integer)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user = relationship("User")
 
     __table_args__ = (Index("ix_queries_org_created", "org_id", "created_at"),)
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("orgs.id"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    prefix: Mapped[str] = mapped_column(String(16), nullable=False)
+    
+    rate_limit: Mapped[int] = mapped_column(Integer, default=100)
+    rate_window_seconds: Mapped[int] = mapped_column(Integer, default=60)
+    
+    scopes: Mapped[Optional[str]] = mapped_column(Text)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    org = relationship("Org")
+    user = relationship("User")
+
+    __table_args__ = (
+        Index("ix_api_keys_org_id", "org_id"),
+        Index("ix_api_keys_key_hash", "key_hash"),
+    )

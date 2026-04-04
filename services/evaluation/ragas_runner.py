@@ -1,13 +1,10 @@
+from __future__ import annotations
+
 import uuid
+from datetime import datetime, timezone
 from typing import Any
-from datetime import datetime
 
 from pydantic import BaseModel
-from ragas import evaluate
-from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
-from datasets import Dataset
-
-from core.config import settings
 
 
 class EvaluationInput(BaseModel):
@@ -46,6 +43,8 @@ class RAGASRunner:
         contexts: list[str],
         ground_truth: str,
     ) -> EvaluationResult:
+        from core.config import settings
+
         if not settings.OPENROUTER_API_KEY:
             return EvaluationResult(
                 query=query,
@@ -53,10 +52,14 @@ class RAGASRunner:
                 answer_relevancy=0.0,
                 context_precision=0.0,
                 context_recall=0.0,
-                evaluated_at=datetime.utcnow(),
+                evaluated_at=datetime.now(timezone.utc),
             )
 
         try:
+            from ragas import evaluate
+            from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
+            from datasets import Dataset
+
             dataset = Dataset.from_dict({
                 "question": [query],
                 "answer": [answer],
@@ -82,16 +85,16 @@ class RAGASRunner:
                 answer_relevancy=float(scores["answer_relevancy"]),
                 context_precision=float(scores["context_precision"]),
                 context_recall=float(scores["context_recall"]),
-                evaluated_at=datetime.utcnow(),
+                evaluated_at=datetime.now(timezone.utc),
             )
-        except Exception as e:
+        except Exception:
             return EvaluationResult(
                 query=query,
                 faithfulness=0.0,
                 answer_relevancy=0.0,
                 context_precision=0.0,
                 context_recall=0.0,
-                evaluated_at=datetime.utcnow(),
+                evaluated_at=datetime.now(timezone.utc),
             )
 
     async def evaluate_batch(
@@ -127,7 +130,7 @@ class GoldenDatasetService:
             ground_truth=ground_truth,
             contexts=contexts,
             source_document_id=source_document_id,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         self._entries.append(entry)
         return entry
@@ -153,9 +156,13 @@ class GoldenDatasetService:
         return False
 
 
+_ragas_runner = RAGASRunner()
+_golden_dataset_service = GoldenDatasetService()
+
+
 def get_ragas_runner() -> RAGASRunner:
-    return RAGASRunner()
+    return _ragas_runner
 
 
 def get_golden_dataset_service() -> GoldenDatasetService:
-    return GoldenDatasetService()
+    return _golden_dataset_service
